@@ -129,16 +129,15 @@ namespace Screentest
     {
         static void Main(string[] args)
         {
-            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL");
+            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL\Desktop");
             if (!di.Exists) { di.Create(); }
 
 
             while (true)
             {
-                Thread.Sleep(5000);
+                Thread.Sleep(2000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                Console.WriteLine("No.1 Completed");
                 var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
                 using (var engine = new TesseractEngine(path, "eng"))
@@ -149,8 +148,6 @@ namespace Screentest
                         using (var page = engine.Process(img))
                         {
                             var text = page.GetText();
-                            Console.WriteLine("---Image Text---");
-                            Console.WriteLine(text);
                             string txtFilePath = @"C:\Users\DELL\Documents\textFile.txt";
                             if (!File.Exists(txtFilePath))
                             {
@@ -168,21 +165,24 @@ namespace Screentest
                                 File.Delete(di + $"\\screenShootImg.png");
                             }
                             List<List<string>> groups = new List<List<string>>();
-                            List<string> current = null;
+                            List<string> current ;
                             string word = "Account No:";
-                            string trgtLine = null;
-                            string num = null;
-                            string number = null;
+                            string trgtLine ;
+                            string num ;
+                            string number ;
                             foreach (var line in File.ReadAllLines(txtFilePath))
                             {
+                                List<long> result = groups.OfType<long>().OrderBy(num => num).ToList();
                                 if (line.Contains(word))
                                 {
+                                    Console.WriteLine("No.9 Completed");
+                                    Console.WriteLine("$$$$$$$$$$$$$$$$$$$$$$$");
                                     trgtLine = line;
                                     current = new List<string>();
                                     groups.Add(current);
                                     num = trgtLine.Substring(trgtLine.IndexOf(word), 17);
                                     number = Regex.Replace(num, "[^0-9]+", string.Empty);
-                                    File.AppendAllText(txtFilePath, $"A/c no: {number}");
+                                    File.WriteAllText(txtFilePath, $"A/c no: {number}");
                                     try
                                     {
                                         HttpClient client = new HttpClient();
@@ -192,7 +192,6 @@ namespace Screentest
                                         string msg = response.ToString();
                                         if (response.IsSuccessStatusCode)
                                         {
-                                            Console.WriteLine(response.Content);
                                             File.AppendAllText(txtFilePath, $"[{msg}]");
                                         }
                                     }
