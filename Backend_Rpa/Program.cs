@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
@@ -131,18 +132,24 @@ namespace Screentest
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL\Desktop");
+            MainAsync();
+        }
+
+        static async void MainAsync()
+        {
+            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL");
             if (!di.Exists) { di.Create(); }
 
 
             while (true)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(5000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
+                Console.WriteLine("No.1 Completed");
+                var path = @"tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
                 using (var engine = new TesseractEngine(path, "eng"))
                 {
@@ -152,7 +159,9 @@ namespace Screentest
                         using (var page = engine.Process(img))
                         {
                             var text = page.GetText();
-                            string txtFilePath = @"C:\Users\DELL\Documents\textFile.txt";
+                            Console.WriteLine("---Image Text---");
+                            Console.WriteLine(text);
+                            string txtFilePath = @"textFile.txt";
                             if (!File.Exists(txtFilePath))
                             {
                                 using (StreamWriter sw = File.CreateText(txtFilePath))
@@ -169,43 +178,50 @@ namespace Screentest
                                 File.Delete(di + $"\\screenShootImg.png");
                             }
                             List<List<string>> groups = new List<List<string>>();
-                            List<string> current ;
+                            List<string> current;
                             string word = "Account No:";
-                            string trgtLine ;
-                            string num ;
-                            string number ;
+                            string trgtLine;
+                            string num;
+                            string number;
                             foreach (var line in File.ReadAllLines(txtFilePath))
                             {
-                                List<long> result = groups.OfType<long>().OrderBy(num => num).ToList();
                                 if (line.Contains(word))
                                 {
-                                    Console.WriteLine("No.9 Completed");
-                                    Console.WriteLine("$$$$$$$$$$$$$$$$$$$$$$$");
+                                    Console.WriteLine("$$$$$$$$$$$$$$$");
                                     trgtLine = line;
                                     current = new List<string>();
                                     groups.Add(current);
-                                    num = trgtLine.Substring(trgtLine.IndexOf(word), 17);
-                                    number = Regex.Replace(num, "[^0-9]+", string.Empty);
-                                    File.WriteAllText(txtFilePath, $"A/c no: {number}");
-                                    try
+                                    ///if(trgtLine.Length > 17)
                                     {
-                                        HttpClient client = new HttpClient();
-                                        client.BaseAddress = new Uri("http://Huddleboardv2:81/api/GetPatientGaps");
-                                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                                        HttpResponseMessage response = client.GetAsync($"/{number}").Result;
-                                        string msg = response.ToString();
-                                        if (response.IsSuccessStatusCode)
+                                        num = trgtLine.Substring(trgtLine.IndexOf(word), 17);
+                                        number = Regex.Replace(num, "[^0-9]+", string.Empty);
+                                        File.AppendAllText(txtFilePath, $"{number}");
+
+                                        try
                                         {
-                                            File.AppendAllText(txtFilePath, $"[{msg}]");
+                                            HttpClient client = new HttpClient();
+                                            HttpResponseMessage response = await client.GetAsync($"http://Huddleboardv2:81/api/GetPatientGaps/{number}");
+                                            response.EnsureSuccessStatusCode();
+                                            string responseBody = await response.Content.ReadAsStringAsync();
+                                            File.AppendAllText(txtFilePath, $"[{responseBody}]");
+
+                                            /*client.BaseAddress = new Uri("http://Huddleboardv2:81/api/GetPatientGaps");
+                                            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                                            HttpResponseMessage response = client.GetAsync($"/{number}").Result;*/
+                                            /*string msg = response.ToString();
+                                            if (response.IsSuccessStatusCode)
+                                            {
+                                                Console.WriteLine(response.Content);
+                                                File.AppendAllText(txtFilePath, $"[{msg}]");
+                                            }*/
                                         }
+                                        catch (Exception ex)
+                                        {
+                                            ex.ToString();
+                                            //File.AppendAllText(txtFilePath, ex.ToString());
+                                        }
+                                        break;
                                     }
-                                    catch (Exception ex)
-                                    {
-                                        ex.ToString();
-                                        //File.AppendAllText(txtFilePath, ex.ToString());
-                                    }
-                                    break;
-                                    //}
                                 }
                                 else
                                 {
