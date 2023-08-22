@@ -6,6 +6,10 @@ using System.Text.RegularExpressions;
 using Tesseract;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 
+/**
+ * Created by Kishore Kumar S - Dated on 17/07/2023.
+ */
+
 namespace ScreenTest
 {
     public class PrintScreen
