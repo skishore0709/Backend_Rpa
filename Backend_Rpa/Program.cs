@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Tesseract;
 using System.Data.SqlClient;
@@ -134,19 +135,24 @@ namespace Screentest
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL\Desktop");
+            MainAsync();
+        }
+
+        static async void MainAsync()
+        {
+            DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL");
             if (!di.Exists) { di.Create(); }
             string IPhostName = Dns.GetHostName();
             string ipAddress = Dns.GetHostByName(IPhostName).AddressList[0].ToString();
 
             while (true)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(5000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                var path = @"tessdata";
+                var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
                 
                 using (var engine = new TesseractEngine(path, "eng"))
@@ -157,7 +163,9 @@ namespace Screentest
                         using (var page = engine.Process(img))
                         {
                             var text = page.GetText();
-                            string txtFilePath = @"C:\Users\DELL\Documents\textFile.txt";
+                            Console.WriteLine("---Image Text---");
+                            Console.WriteLine(text);
+                            string txtFilePath = @"textFile.txt";
                             if (!File.Exists(txtFilePath))
                             {
                                 using (StreamWriter sw = File.CreateText(txtFilePath))
@@ -174,18 +182,16 @@ namespace Screentest
                                 File.Delete(di + $"\\screenShootImg.png");
                             }
                             List<List<string>> groups = new List<List<string>>();
-                            List<string> current ;
+                            List<string> current;
                             string word = "Account No:";
-                            string trgtLine ;
-                            string num ;
-                            string number ;
+                            string trgtLine;
+                            string num;
+                            string number;
                             foreach (var line in File.ReadAllLines(txtFilePath))
                             {
-                                List<long> result = groups.OfType<long>().OrderBy(num => num).ToList();
                                 if (line.Contains(word))
                                 {
-                                    Console.WriteLine("No.9 Completed");
-                                    Console.WriteLine("$$$$$$$$$$$$$$$$$$$$$$$");
+                                    Console.WriteLine("$$$$$$$$$$$$$$$");
                                     trgtLine = line;
                                     current = new List<string>();
                                     groups.Add(current);
@@ -204,8 +210,8 @@ namespace Screentest
                                             File.AppendAllText(txtFilePath, $"[{msg}]");
                                             SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
                                             connection.Open();
-                                            SqlCommand command = new SqlCommand("Insert into Widget(APIResult, DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','"+DateTime.Now+"','"+ ipAddress + "', '1',''"+number +")");
-                                            command.ExecuteNonQuery();
+                                            SqlCommand cmd = new SqlCommand("Insert into Widget(APIResult,DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','" + DateTime.Now + "','" + ipAddress + "','" + 0 + "','" + number + "')");
+                                            cmd.ExecuteNonQuery();
                                             connection.Close();
                                         }
                                     }
