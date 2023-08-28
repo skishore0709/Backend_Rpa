@@ -4,7 +4,10 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Tesseract;
+using System.Data.SqlClient;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
+using Microsoft.Data.SqlClient;
+using System.Net;
 
 /**
  * Created by Kishore Kumar S - Dated on 17/07/2023.
@@ -135,15 +138,17 @@ namespace Screentest
         {
             DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL\Desktop");
             if (!di.Exists) { di.Create(); }
-
+            string IPhostName = Dns.GetHostName();
+            string ipAddress = Dns.GetHostByName(IPhostName).AddressList[0].ToString();
 
             while (true)
             {
                 Thread.Sleep(2000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
+                var path = @"tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
+                
                 using (var engine = new TesseractEngine(path, "eng"))
                 {
                     engine.SetVariable("user_defined_dpi", "70");
@@ -197,6 +202,11 @@ namespace Screentest
                                         if (response.IsSuccessStatusCode)
                                         {
                                             File.AppendAllText(txtFilePath, $"[{msg}]");
+                                            SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
+                                            connection.Open();
+                                            SqlCommand command = new SqlCommand("Insert into Widget(APIResult, DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','"+DateTime.Now+"','"+ ipAddress + "', '1',''"+number +")");
+                                            command.ExecuteNonQuery();
+                                            connection.Close();
                                         }
                                     }
                                     catch (Exception ex)
