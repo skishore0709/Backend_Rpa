@@ -2,9 +2,17 @@
 using System.Drawing;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Tesseract;
+using System.Data.SqlClient;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
+using Microsoft.Data.SqlClient;
+using System.Net;
+
+/**
+ * Created by Kishore Kumar S - Dated on 17/07/2023.
+ */
 
 namespace ScreenTest
 {
@@ -127,20 +135,26 @@ namespace Screentest
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
+        {
+            MainAsync();
+        }
+
+        static async void MainAsync()
         {
             DirectoryInfo di = new DirectoryInfo(@"C:\Users\DELL");
             if (!di.Exists) { di.Create(); }
-
+            string IPhostName = Dns.GetHostName();
+            string ipAddress = Dns.GetHostByName(IPhostName).AddressList[0].ToString();
 
             while (true)
             {
                 Thread.Sleep(5000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                Console.WriteLine("No.1 Completed");
                 var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
+                
                 using (var engine = new TesseractEngine(path, "eng"))
                 {
                     engine.SetVariable("user_defined_dpi", "70");
@@ -151,7 +165,7 @@ namespace Screentest
                             var text = page.GetText();
                             Console.WriteLine("---Image Text---");
                             Console.WriteLine(text);
-                            string txtFilePath = @"C:\Users\DELL\Documents\textFile.txt";
+                            string txtFilePath = @"textFile.txt";
                             if (!File.Exists(txtFilePath))
                             {
                                 using (StreamWriter sw = File.CreateText(txtFilePath))
@@ -168,21 +182,22 @@ namespace Screentest
                                 File.Delete(di + $"\\screenShootImg.png");
                             }
                             List<List<string>> groups = new List<List<string>>();
-                            List<string> current = null;
+                            List<string> current;
                             string word = "Account No:";
-                            string trgtLine = null;
-                            string num = null;
-                            string number = null;
+                            string trgtLine;
+                            string num;
+                            string number;
                             foreach (var line in File.ReadAllLines(txtFilePath))
                             {
                                 if (line.Contains(word))
                                 {
+                                    Console.WriteLine("$$$$$$$$$$$$$$$");
                                     trgtLine = line;
                                     current = new List<string>();
                                     groups.Add(current);
                                     num = trgtLine.Substring(trgtLine.IndexOf(word), 17);
                                     number = Regex.Replace(num, "[^0-9]+", string.Empty);
-                                    File.AppendAllText(txtFilePath, $"A/c no: {number}");
+                                    File.WriteAllText(txtFilePath, $"A/c no: {number}");
                                     try
                                     {
                                         HttpClient client = new HttpClient();
@@ -192,8 +207,12 @@ namespace Screentest
                                         string msg = response.ToString();
                                         if (response.IsSuccessStatusCode)
                                         {
-                                            Console.WriteLine(response.Content);
                                             File.AppendAllText(txtFilePath, $"[{msg}]");
+                                            SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
+                                            connection.Open();
+                                            SqlCommand cmd = new SqlCommand("Insert into Widget(APIResult,DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','" + DateTime.Now + "','" + ipAddress + "','" + 0 + "','" + number + "')");
+                                            cmd.ExecuteNonQuery();
+                                            connection.Close();
                                         }
                                     }
                                     catch (Exception ex)
