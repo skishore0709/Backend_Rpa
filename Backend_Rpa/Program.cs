@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Tesseract;
+using System.Net.Http;
 using System.Data.SqlClient;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using Microsoft.Data.SqlClient;
@@ -152,7 +153,7 @@ namespace Screentest
                 Thread.Sleep(5000);
                 PrintScreen ps = new PrintScreen();
                 ps.CaptureScreenToFile(di + $"\\screenShootImg.png", ImageFormat.Png);
-                var path = @"C:\Users\DELL\source\repos\testingNew\testingNew\tessdata";
+                var path = @"tessdata";
                 var sourceFilePath = di + $"\\screenShootImg.png";
                 
                 using (var engine = new TesseractEngine(path, "eng"))
@@ -163,8 +164,6 @@ namespace Screentest
                         using (var page = engine.Process(img))
                         {
                             var text = page.GetText();
-                            Console.WriteLine("---Image Text---");
-                            Console.WriteLine(text);
                             string txtFilePath = @"textFile.txt";
                             if (!File.Exists(txtFilePath))
                             {
@@ -191,41 +190,36 @@ namespace Screentest
                             {
                                 if (line.Contains(word))
                                 {
-                                    Console.WriteLine("$$$$$$$$$$$$$$$");
                                     trgtLine = line;
                                     current = new List<string>();
                                     groups.Add(current);
-                                    num = trgtLine.Substring(trgtLine.IndexOf(word), 17);
+                                    num = trgtLine.Substring(trgtLine.IndexOf(word), 18);
                                     number = Regex.Replace(num, "[^0-9]+", string.Empty);
                                     File.WriteAllText(txtFilePath, $"A/c no: {number}");
-                                    try
+                                    if (number.Length == 6)
                                     {
-                                        HttpClient client = new HttpClient();
-                                        client.BaseAddress = new Uri("http://Huddleboardv2:81/api/GetPatientGaps");
-                                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                                        HttpResponseMessage response = client.GetAsync($"/{number}").Result;
-                                        string msg = response.ToString();
-                                        if (response.IsSuccessStatusCode)
+                                        try
                                         {
-                                            File.AppendAllText(txtFilePath, $"[{msg}]");
-                                            SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
-                                            connection.Open();
-                                            SqlCommand cmd = new SqlCommand("Insert into Widget(APIResult,DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','" + DateTime.Now + "','" + ipAddress + "','" + 0 + "','" + number + "')");
-                                            cmd.ExecuteNonQuery();
-                                            connection.Close();
+                                            HttpClient client = new HttpClient();
+                                            HttpResponseMessage response = client.GetAsync($"http://Huddleboardv2:81/api/GetPatientGaps/{number}").Result;
+                                            response.EnsureSuccessStatusCode();
+                                            var responseContent = await response.Content.ReadAsStringAsync();
+                                            string msg = responseContent.ToString();
+                                            if (response.IsSuccessStatusCode)
+                                            {
+                                                SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
+                                                connection.Open();
+                                                SqlCommand cmd = new SqlCommand("INSERT INTO Widget(APIResult,DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','" + DateTime.Now + "','" + ipAddress + "','" + 0 + "','" + number + "')", connection);
+                                                cmd.ExecuteNonQuery();
+                                                connection.Close();
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            ex.ToString();
                                         }
                                     }
-                                    catch (Exception ex)
-                                    {
-                                        ex.ToString();
-                                        //File.AppendAllText(txtFilePath, ex.ToString());
-                                    }
                                     break;
-                                    //}
-                                }
-                                else
-                                {
-                                    File.WriteAllText(txtFilePath, "Account Number: String.Empty();");
                                 }
                             }
                         }
