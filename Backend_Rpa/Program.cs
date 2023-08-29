@@ -9,6 +9,7 @@ using System.Data.SqlClient;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
 using Microsoft.Data.SqlClient;
 using System.Net;
+using System.Net.Http;
 
 /**
  * Created by Kishore Kumar S - Dated on 17/07/2023.
@@ -201,13 +202,15 @@ namespace Screentest
                                     try
                                     {
                                         HttpClient client = new HttpClient();
-                                        client.BaseAddress = new Uri("http://Huddleboardv2:81/api/GetPatientGaps");
+                                        /*client.BaseAddress = new Uri($"http://Huddleboardv2:81/api/GetPatientGaps/{number}");
                                         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                                        HttpResponseMessage response = client.GetAsync($"/{number}").Result;
-                                        string msg = response.ToString();
+                                        HttpResponseMessage response = client.GetAsync($"/{number}").Result;*/
+                                        var response = await client.GetAsync($"http://Huddleboardv2:81/api/GetPatientGaps/{number}");
+                                        response.EnsureSuccessStatusCode();
+                                        var responseContent = await response.Content.ReadAsStringAsync();
+                                        string msg = responseContent.ToString();
                                         if (response.IsSuccessStatusCode)
                                         {
-                                            File.AppendAllText(txtFilePath, $"[{msg}]");
                                             SqlConnection connection = new SqlConnection(@"Data Source = HUDDLEBOARDV2\SQLEXPRESS; Initial Catalog=Huddle_V2;Integrated Security=True");
                                             connection.Open();
                                             SqlCommand cmd = new SqlCommand("Insert into Widget(APIResult,DateTime,IPAddress,Displayed,AccountNumber)Values('" + msg + "','" + DateTime.Now + "','" + ipAddress + "','" + 0 + "','" + number + "')");
@@ -218,14 +221,8 @@ namespace Screentest
                                     catch (Exception ex)
                                     {
                                         ex.ToString();
-                                        //File.AppendAllText(txtFilePath, ex.ToString());
                                     }
                                     break;
-                                    //}
-                                }
-                                else
-                                {
-                                    File.WriteAllText(txtFilePath, "Account Number: String.Empty();");
                                 }
                             }
                         }
